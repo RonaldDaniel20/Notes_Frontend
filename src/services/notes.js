@@ -3,6 +3,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 //Obteniendo las notas
 const getAll = async () => {
+    console.log('Hola')
     const request = await axios.get(API_URL + '/notes')
     return request.data
 }
