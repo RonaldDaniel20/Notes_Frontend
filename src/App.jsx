@@ -48,6 +48,7 @@ const App = () => {
 
         }catch(error){
             console.log(error.message)
+            alert('Ocurrio un error. Vuelve a intentarlo más tarde')
         }finally{
             setNewNote('')
         }
@@ -61,8 +62,9 @@ const App = () => {
         const note = notas.find(note => note.id === id)
 
         try{
-        
-            await notesService.update(id)
+            
+            const changeNotes = {...note, important: !note.important}
+            await notesService.update(id, changeNotes)
             alert('Nota actualizada con exito')
 
         }catch (error){
