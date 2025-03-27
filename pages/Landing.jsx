@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react"
+import { setNotification } from "../src/store/slices/notificationSlice"
+import { useDispatch, useSelector } from "react-redux"
+import { useNavigate } from "react-router-dom"
+import { clearAuth } from "../src/store/slices/authSlice"
 import Button from '../Components/Button'
 import Note from "../Components/Notes"
-import Notification from "../Components/Notification"
 
-import Login from "./login"
 import NoteForm from "../Components/NoteForm"
 import Togglable from "../Components/Togglable"
 
 //Services
 import notesService from "../src/services/notes"
-import loginService from '../src/services/login'
+
 
 
 //Estilos 
@@ -18,43 +20,22 @@ import '../src/index.css'
 const Landing = () => {
     const [notas, setNotas] = useState([])
     const [showAll, setShowAll] = useState(true)
-    const [errorMessage, setErrorMessage] = useState('')
-    const [user, setUser] = useState(null)
-
-
-    const [state, setState] = useState({
-        password: '',
-        user: ""
-    })
-    
-    const handleInput = (event) => {
-        setState({
-            ...state,
-            [event.target.name]: event.target.value
-        })
-    }
-
     const noteFormRef = useRef()
-    
-    const onSubmit = async(event) => {
-        try{
-            event.preventDefault()
-            const request = await loginService.login(({
-                username: state.user,
-                password: state.password
-            }))
-            console.log(request.user)
-            setUser(request.user)
-            window.localStorage.setItem('user', JSON.stringify(request.user))
-        }catch(error){
-            console.log(error)
-            setErrorMessage('Usuario o contraseña no validos')
-            setTimeout(() => {
-                setErrorMessage('')
-            },4000)
-        }        
-    }
 
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+
+    const usuario = useSelector((state) => state.auth.authUser)
+
+    const redireccion = () => {
+        if(!usuario){
+            navigate('/login')
+            return true
+        }
+
+        return false
+    }
+    
     const getNotes = useCallback(async () => {
         const notes = await notesService.getAll()
         setNotas(notes.notes)
@@ -64,43 +45,47 @@ const Landing = () => {
         getNotes()
     }, [getNotes])
 
-    useEffect(() => {
-        const loggedUser = window.localStorage.getItem('user')
-        if(loggedUser){
-            const user = JSON.parse(loggedUser)
-            setUser(user)
-        }
-    },[])
 
     const notesToShow = showAll ? notas : notas.filter(note => note.important)
 
     const addNote = async (noteObject) => {
 
+        if(redireccion()) return
+    
         try{
-            console.log(noteObject)
-            await notesService.create(noteObject, user.token)
-            alert('Nota añadida con exito')
+            await notesService.create(noteObject, usuario.token)
             noteFormRef.current.toggleVisibility()
+            dispatch(setNotification({
+                title: '¡Exito!',
+                text: 'Nota añadida con exito',
+                icon: 'success',
+                timer: 3000
+            }))
             getNotes()
 
         }catch(error){
             console.log(error)
             console.log(error.status)
             if(error.status === 401){
-                localStorage.removeItem('user')
+                dispatch(setNotification({
+                    title: '¡Ups!',
+                    text: 'Tu sesión ha expirado. Por favor, vuelve a ingresar',
+                    icon: 'error',
+                    timer: 3000
+                }))
+                navigate('/login')
+                dispatch(clearAuth())
             } 
             else{
-                setErrorMessage(
-                    error.response.data.message
-                )
-    
-                setTimeout(() => {
-                    setErrorMessage('')
-                },4000)
+                dispatch(setNotification({
+                    title: 'Ocurrio un error',
+                    text: error.response.data.message,
+                    icon: 'error',
+                    timer: 3000
+                }))
             }
         }
     }
-
 
 
     const toggleImportance = async (id) => {
@@ -110,19 +95,21 @@ const Landing = () => {
             
             const changeNotes = {...note, important: !note.important}
             await notesService.update(id, changeNotes)
-            alert('Nota actualizada con exito')
+            dispatch(setNotification({
+                title: '¡Exito!',
+                text: 'Nota actualizada con exito',
+                icon: 'success',
+                timer: 3000
+            }))
 
         }catch (error){
             console.log(error.message)
-            setErrorMessage(
-                `Note ${note.content} was already removed from server`
-            )
-
-            setTimeout(() => {
-                setErrorMessage('')
-            },4000)
-
-            setNotas(notas.filter(nota => nota.id !== id))
+            dispatch(setNotification({
+                title: 'Ocurrio un error',
+                text: 'Vuelve a intentarlo más tarde',
+                icon: 'error',
+                timer: 3000
+            }))
         }finally{
             getNotes()
         }
@@ -132,31 +119,27 @@ const Landing = () => {
         try{
 
             await notesService.deleteNota(id)
-            alert('Nota eliminada con exito')
+            dispatch(setNotification({
+                title: '¡Exito!',
+                text: 'Nota eliminada con exito',
+                icon: 'success',
+                timer: 3000
+            }))
             
         }catch(error){
             console.log(error.message)
-            setErrorMessage(
-                `No se pudo eliminar la nota ya que no existe`
-            )
+            dispatch(setNotification({
+                title: 'Ocurrio un error',
+                text: 'Vuelve a intentarlo más tarde',
+                icon: 'error',
+                timer: 3000
+            }))
         }finally{
             getNotes()
         }
     }
 
     const changeAll = () => setShowAll(current => !current)
-
-    const loginForm = () => {
-
-        return (
-            <div>
-                <Togglable label = {'login in'}>
-                    <Login onSubmit={onSubmit} handleInput={handleInput} state={state} />
-                </Togglable>
-            </div>
-
-        )    
-    }
 
     const noteForm = () => {
         return (
@@ -169,14 +152,11 @@ const Landing = () => {
     return (
         <div>
         <h1>Notes App</h1>
-        { errorMessage !== '' && <Notification message ={errorMessage} /> }
-        {user === null ? loginForm():
-            <div> 
-                <p>{user.name} logged</p>
-            </div>
-        }
 
-        {user !== null && noteForm()}
+        {usuario !== null && <p>{usuario.name}</p>}
+
+
+        {noteForm()}
         <br/>
         <div>
             <Button onClick={changeAll} text={showAll ? 'important' : 'all'}/>

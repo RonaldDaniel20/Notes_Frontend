@@ -1,6 +1,7 @@
 import { useState } from "react"
 import loginService from '../src/services/login'
 import { setNotification } from "../src/store/slices/notificationSlice"
+import { setAuthUser, setIsLoggedIn } from "../src/store/slices/authSlice"
 import { useDispatch } from "react-redux"
 import { useNavigate } from "react-router-dom"
 
@@ -39,6 +40,13 @@ const Login = () => {
                 timer: 3000
             }))
             window.localStorage.setItem('user',JSON.stringify(request.user))
+
+            dispatch(setIsLoggedIn(true))
+            dispatch(setAuthUser({
+                name: request.user.name,
+                token: request.user.token
+            }))
+
 
             navigate('/home')
 
