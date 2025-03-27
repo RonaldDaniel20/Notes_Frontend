@@ -8,8 +8,13 @@ const getAll = async () => {
 }
 
 //Creando notas
-const create = async (newNote) => {
-    const request = await axios.post(API_URL + '/addNota', newNote)
+const create = async (newNote,token) => {
+    
+    const request = await axios.post(API_URL + '/addNota', newNote,{
+        headers:{
+            Authorization: `Bearer ${token}`
+        }
+    })
     return request.data
 }
 
