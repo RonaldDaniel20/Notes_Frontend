@@ -55,7 +55,7 @@ const Login = () => {
             console.log(error)
             dispatch(setNotification({
                 title: '¡Ups!',
-                text: error.message,
+                text: 'Usuario o contraseña incorrectos',
                 icon: 'error',
                 timer: 3000
             }))

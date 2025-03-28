@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { clearAuth } from "../src/store/slices/authSlice"
 import Button from '../Components/Button'
 import Note from "../Components/Notes"
+import { useQuery } from "@tanstack/react-query"
 
 import NoteForm from "../Components/NoteForm"
 import Togglable from "../Components/Togglable"
@@ -18,7 +19,7 @@ import notesService from "../src/services/notes"
 import '../src/index.css'
 
 const Landing = () => {
-    const [notas, setNotas] = useState([])
+    //const [notas, setNotas] = useState([])
     const [showAll, setShowAll] = useState(true)
     const noteFormRef = useRef()
 
@@ -36,15 +37,35 @@ const Landing = () => {
         return false
     }
     
-    const getNotes = useCallback(async () => {
-        const notes = await notesService.getAll()
-        setNotas(notes.notes)
-    },[])
+    // const getNotes = useCallback(async () => {
+    //     const notes = await notesService.getAll()
+    //     setNotas(notes.notes)
+    // },[])
 
-    useEffect(() => {
-        getNotes()
-    }, [getNotes])
+    // useEffect(() => {
+    //     getNotes()
+    // }, [getNotes])
 
+    const {
+        data: notes,
+        isLoading,
+        isError,
+        refetch
+      } = useQuery({
+        queryKey: ['notas'], 
+        queryFn: async () => {
+          const allNotes = await notesService.getAll();
+          return allNotes;
+        },
+      });
+      
+    
+    console.log(isLoading)
+    console.log(isError)
+
+    if(isLoading) return
+
+    const notas = notes.notes
 
     const notesToShow = showAll ? notas : notas.filter(note => note.important)
 
@@ -61,7 +82,9 @@ const Landing = () => {
                 icon: 'success',
                 timer: 3000
             }))
-            getNotes()
+            //getNotes()
+            refetch()
+            
 
         }catch(error){
             console.log(error)
@@ -73,8 +96,9 @@ const Landing = () => {
                     icon: 'error',
                     timer: 3000
                 }))
-                navigate('/login')
                 dispatch(clearAuth())
+                navigate('/login')
+                
             } 
             else{
                 dispatch(setNotification({
@@ -111,7 +135,8 @@ const Landing = () => {
                 timer: 3000
             }))
         }finally{
-            getNotes()
+            //getNotes()
+            refetch()
         }
     }
 
@@ -135,7 +160,8 @@ const Landing = () => {
                 timer: 3000
             }))
         }finally{
-            getNotes()
+            //  getNotes()
+            refetch()
         }
     }
 
